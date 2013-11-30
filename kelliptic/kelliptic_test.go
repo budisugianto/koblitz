@@ -118,11 +118,11 @@ func TestMarshal(t *testing.T) {
 
 func TestCompression(t *testing.T) {
 	s256 := S256()
-        _, x, y, err := elliptic.GenerateKey(s256, rand.Reader)
-        if err != nil {
-                t.Error(err)
-                return
-        }
+	_, x, y, err := elliptic.GenerateKey(s256, rand.Reader)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	cp := s256.CompressPoint(x, y)
 
 	_, yy, err := s256.DecompressPoint(cp)
