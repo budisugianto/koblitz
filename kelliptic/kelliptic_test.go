@@ -13,6 +13,8 @@ import (
 	"testing"
 )
 
+var _ elliptic.Curve = S256() // verify we satisfy the elliptic.Curve interface
+
 func TestOnCurve(t *testing.T) {
 	s160 := S160()
 	if !s160.IsOnCurve(s160.Gx, s160.Gy) {
@@ -86,11 +88,10 @@ func TestBaseMult(t *testing.T) {
 
 //TODO: test more curves?
 func BenchmarkBaseMult(b *testing.B) {
-	b.ResetTimer()
 	s256 := S224()
 	e := s256BaseMultTests[0] //TODO: check, used to be 25 instead of 0, but it's probably ok
 	k, _ := new(big.Int).SetString(e.k, 16)
-	b.StartTimer()
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		s256.ScalarBaseMult(k.Bytes())
 	}
