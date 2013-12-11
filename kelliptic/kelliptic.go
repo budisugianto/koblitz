@@ -1,5 +1,3 @@
-package kelliptic
-
 // Copyright 2010 The Go Authors. All rights reserved.
 // Copyright 2011 ThePiachu. All rights reserved.
 // Use of this source code is governed by a BSD-style
@@ -7,13 +5,14 @@ package kelliptic
 
 // Package bitelliptic implements several Koblitz elliptic curves over prime
 // fields.
-
+//
 // This package operates, internally, on Jacobian coordinates. For a given
 // (x, y) position on the curve, the Jacobian coordinates are (x1, y1, z1)
 // where x = x1/z1² and y = y1/z1³. The greatest speedups come when the whole
 // calculation can be performed within the transform (as in ScalarMult and
 // ScalarBaseMult). But even for Add and Double, it's faster to apply and
 // reverse the transform than to operate in affine coordinates.
+package kelliptic
 
 import (
 	"crypto/elliptic"
@@ -58,9 +57,10 @@ func (curve *Curve) IsOnCurve(x, y *big.Int) bool {
 	return x3.Cmp(y2) == 0
 }
 
-//TODO: double check if the function is okay
 // affineFromJacobian reverses the Jacobian transform. See the comment at the
 // top of the file.
+//
+// TODO(x): double check if the function is okay
 func (curve *Curve) affineFromJacobian(x, y, z *big.Int) (xOut, yOut *big.Int) {
 	zinv := new(big.Int).ModInverse(z, curve.P)
 	zinvsq := new(big.Int).Mul(zinv, zinv)
@@ -152,9 +152,9 @@ func (curve *Curve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 
 // doubleJacobian takes a point in Jacobian coordinates, (x, y, z), and
 // returns its double, also in Jacobian form.
+//
+// See http://hyperellipticurve.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
 func (curve *Curve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.Int) {
-	// See http://hyperellipticurve.org/EFD/g1p/auto-shortw-jacobian-0.html#doubling-dbl-2009-l
-
 	a := new(big.Int).Mul(x, x) //X1²
 	b := new(big.Int).Mul(y, y) //Y1²
 	c := new(big.Int).Mul(b, b) //B²
@@ -184,8 +184,9 @@ func (curve *Curve) doubleJacobian(x, y, z *big.Int) (*big.Int, *big.Int, *big.I
 	return x3, y3, z3
 }
 
-//TODO: double check if it is okay
 // ScalarMult returns k*(Bx,By) where k is a number in big-endian form.
+//
+// TODO(x): double check if it is okay
 func (curve *Curve) ScalarMult(Bx, By *big.Int, k []byte) (*big.Int, *big.Int) {
 	// We have a slight problem in that the identity of the group (the
 	// point at infinity) cannot be represented in (x, y) form on a finite
@@ -316,7 +317,6 @@ func S256() *Curve {
 
 // Point Compression Routines. These could use a lot of testing.
 func (curve *Curve) CompressPoint(X, Y *big.Int) (cp []byte) {
-
 	by := new(big.Int).And(Y, big.NewInt(1)).Int64()
 	bx := X.Bytes()
 	cp = make([]byte, len(bx)+1)
@@ -331,7 +331,6 @@ func (curve *Curve) CompressPoint(X, Y *big.Int) (cp []byte) {
 }
 
 func (curve *Curve) DecompressPoint(cp []byte) (X, Y *big.Int, err error) {
-
 	var c int64
 
 	switch cp[0] { // c = 2 most signiﬁcant bits of S
@@ -373,11 +372,12 @@ func (curve *Curve) DecompressPoint(cp []byte) (X, Y *big.Int, err error) {
 	return
 }
 
+// Sqrt returns the module square root.
+//
 // Modulo Square root involves deep magic. Uses the Shanks-Tonelli algorithem:
 //    http://en.wikipedia.org/wiki/Shanks-Tonelli_algorithm
 // Translated from a python implementation found here:
 //    http://eli.thegreenplace.net/2009/03/07/computing-modular-square-roots-in-python/
-//
 func (curve *Curve) Sqrt(a *big.Int) *big.Int {
 	ZERO := big.NewInt(0)
 	ONE := big.NewInt(1)
@@ -485,7 +485,7 @@ func (curve *Curve) Sqrt(a *big.Int) *big.Int {
 		r.Set(m)
 	}
 
-	return ZERO // This will never get reached.
+	//return ZERO // This will never get reached.
 }
 
 func legendre_symbol(a, p *big.Int) int {
