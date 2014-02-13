@@ -315,6 +315,10 @@ func S256() *Curve {
 	return secp256k1
 }
 
+func CompressPoint(curve *Curve, X, Y *big.Int) (cp []byte) {
+    return curve.CompressPoint(X, Y)
+}
+
 // Point Compression Routines. These could use a lot of testing.
 func (curve *Curve) CompressPoint(X, Y *big.Int) (cp []byte) {
 	by := new(big.Int).And(Y, big.NewInt(1)).Int64()
@@ -374,7 +378,9 @@ func (curve *Curve) DecompressPoint(cp []byte) (X, Y *big.Int, err error) {
 
 // Sqrt returns the module square root.
 //
-// Modulo Square root involves deep magic. Uses the Shanks-Tonelli algorithem:
+// Modulus must be prime. Some non-prime values will loop indefinately.
+// Modulo Square root involves deep magic. You have been warned!
+// Uses the Shanks-Tonelli algorithem:
 //    http://en.wikipedia.org/wiki/Shanks-Tonelli_algorithm
 // Translated from a python implementation found here:
 //    http://eli.thegreenplace.net/2009/03/07/computing-modular-square-roots-in-python/
@@ -391,12 +397,12 @@ func (curve *Curve) Sqrt(a *big.Int) *big.Int {
 	// Simple Cases
 	//
 
-	if legendre_symbol(a, p) != 1 {
-		return ZERO
-	} else if a.Cmp(ZERO) == 0 {
+	if a.Cmp(ZERO) == 0 {
 		return ZERO
 	} else if p.Cmp(TWO) == 0 {
-		return p
+		return a.Mod(a,p)
+	} else if LegendreSymbol(a, p) != 1 {
+		return ZERO
 	} else if c.Mod(p, FOUR).Cmp(THREE) == 0 {
 		c.Add(p, ONE)
 		c.Div(c, FOUR)
@@ -422,10 +428,9 @@ func (curve *Curve) Sqrt(a *big.Int) *big.Int {
 	//
 	n := new(big.Int)
 	n.Set(TWO)
-	for legendre_symbol(n, p) != -1 {
+	for LegendreSymbol(n, p) != -1 {
 		n.Add(n, ONE)
 	}
-
 	/*
 	   Here be dragons!
 
@@ -484,11 +489,9 @@ func (curve *Curve) Sqrt(a *big.Int) *big.Int {
 		b.Mod(b.Mul(b, g), p)
 		r.Set(m)
 	}
-
-	//return ZERO // This will never get reached.
 }
 
-func legendre_symbol(a, p *big.Int) int {
+func LegendreSymbol(a, p *big.Int) int {
 	ZERO := big.NewInt(0)
 	ONE := big.NewInt(1)
 	TWO := big.NewInt(2)

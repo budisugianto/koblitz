@@ -9,6 +9,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"fmt"
+	. "github.com/smartystreets/goconvey/convey"
 	"math/big"
 	"testing"
 )
@@ -132,8 +133,87 @@ func TestCompression(t *testing.T) {
 		return
 	}
 
-	if y.Cmp(yy) != 0 {
-		t.Error("decompress returned different value for y")
-		return
+	Convey(`Decompressed Point should equal original point.`, t, func() {
+		So(y, ShouldResemble, yy)
+	})
+}
+
+func TestLegendreSymbol(t *testing.T) {
+
+	zero := make([]int64, 0, 14)
+	residue := make([]int64, 0, 14)
+	nonresidue := make([]int64, 0, 14)
+
+	p := big.NewInt(17)
+
+	for i := int64(0); i < 17; i++ {
+		a := big.NewInt(i)
+		l := LegendreSymbol(a, p)
+	
+		if l == 0 {
+			zero = append(zero, i)
+		} else if l > 0 {
+			residue = append(residue, i)
+		} else {
+			nonresidue = append(nonresidue, i)
+		}
 	}
+
+	Convey(`Find the residues for numbers mod 17`, t, func() {
+		So([]int64{0}, ShouldResemble, zero)
+		So([]int64{1, 2, 4, 8, 9, 13, 15, 16}, ShouldResemble, residue)
+		So([]int64{3, 5, 6, 7, 10, 11, 12, 14}, ShouldResemble, nonresidue)
+	})
+
+}
+
+func TestModuloSqrt(t *testing.T) {
+
+	ZERO := big.NewInt(0)
+	ONE := big.NewInt(1)
+	
+	c := new(Curve)
+
+	Convey(`Check sqrt mod 2 cases`, t, func() {
+		c.P = big.NewInt(2)
+
+		So(c.Sqrt(ZERO).Int64(), ShouldEqual, 0)
+		So(c.Sqrt(ONE).Int64(), ShouldEqual, 1)
+	})
+
+	Convey(`Verify that sqrt mod 17 results are correct.`, t, func() {
+		c.P = big.NewInt(17)	
+		for i := int64(0); i < 17; i++ {
+
+			rt := c.Sqrt(big.NewInt(i))
+			if rt.Cmp(ZERO) == 0 {
+				continue
+			}
+
+			rt.Mul(rt, rt)
+			rt.Mod(rt, c.P)
+
+			So(i, ShouldEqual, rt.Int64())
+		}
+	})
+
+	// Mod 2 and 17 cover all code for Sqrt. 
+	// These tests further test the dragon code. 
+
+	SkipConvey(`Verify that sqrt mod 73 results are correct.`, t, func() {
+		c.P = big.NewInt(73)
+		for i := int64(0); i < 73; i++ {
+
+			rt := c.Sqrt(big.NewInt(i))
+			if rt.Cmp(ZERO) == 0 {
+				continue
+			}
+
+			rt.Mul(rt, rt)
+			rt.Mod(rt, c.P)
+
+			So(i, ShouldEqual, rt.Int64())
+		}
+	})
+
 }
