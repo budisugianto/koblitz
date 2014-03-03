@@ -8,6 +8,7 @@ package kelliptic
 import (
 	"crypto/elliptic"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"math/big"
@@ -101,6 +102,9 @@ func BenchmarkBaseMult(b *testing.B) {
 //TODO: test more curves?
 func TestMarshal(t *testing.T) {
 	s256 := S256()
+
+	// 04e1aa5f8cdeb412bcd043c4df0c9d0d4e5132b728f521ffe8590a25775cb5cd956ca2518d87b502d7971f5c7b68afbb8d7406ba580eb683fd57466a6c5a7982bb
+
 	_, x, y, err := elliptic.GenerateKey(s256, rand.Reader)
 	if err != nil {
 		t.Error(err)
@@ -120,21 +124,64 @@ func TestMarshal(t *testing.T) {
 
 func TestCompression(t *testing.T) {
 	s256 := S256()
-	_, x, y, err := elliptic.GenerateKey(s256, rand.Reader)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	cp := s256.CompressPoint(x, y)
 
-	_, yy, err := s256.DecompressPoint(cp)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	Convey(`Decompressed Points should equal original point.`, t, func() {
+		points := []string{"02a8b7effaef9a36d0fe3b3c218e0c3b621c957166954d8d00c485ce3818196745",
+			"037e8accb04b42d262de134589e9e18f5f9f03c136ff6efdb3f57601365f743cc6"}
 
-	Convey(`Decompressed Point should equal original point.`, t, func() {
-		So(y, ShouldResemble, yy)
+		for _, px := range points {
+			p, _ := hex.DecodeString(px)
+
+			x, y, err := s256.DecompressPoint(p)
+
+			cp := CompressPoint(s256, x, y)
+
+			So(cp, ShouldResemble, p)
+
+			xx, yy, err := s256.DecompressPoint(cp)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			So(x, ShouldResemble, xx)
+			So(y, ShouldResemble, yy)
+		}
+	})
+
+	Convey(`Unserialize point that is not compressed.`, t, func() {
+		p, _ := hex.DecodeString("04a8b7effaef9a36d0fe3b3c218e0c3b621c957166954d8d00c485ce38181967451040be9bd94c9de7b8296d9293073e4b7e91c7ebf80a3137e355fc314bcc06de")
+
+		x, y, err := s256.DecompressPoint(p)
+
+		sp := elliptic.Marshal(s256, x, y)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		So(sp, ShouldResemble, p)
+	})
+
+	Convey(`Test Falure Cases`, t, func() {
+		badheader, _ := hex.DecodeString("077e8accb04b42d262de134589e9e18f5f9f03c136ff6efdb3f57601365f743cc3")
+		badlength, _ := hex.DecodeString("037accb04b42d262de134589e9e18f5f9f03c136ff6efdb3f57601365f743cc3")
+		notcurve, _ := hex.DecodeString("030000000000000000000000000000000000000000000000000000000000000000")
+
+		Convey(`Bad Header should fail`, func() {
+			_, _, err := s256.DecompressPoint(badheader)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey(`Bad Length should fail`, func() {
+			_, _, err := s256.DecompressPoint(badlength)
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey(`Not on Curve`, func() {
+			_, _, err := s256.DecompressPoint(notcurve)
+			So(err, ShouldNotBeNil)
+		})
 	})
 }
 
@@ -149,7 +196,7 @@ func TestLegendreSymbol(t *testing.T) {
 	for i := int64(0); i < 17; i++ {
 		a := big.NewInt(i)
 		l := LegendreSymbol(a, p)
-	
+
 		if l == 0 {
 			zero = append(zero, i)
 		} else if l > 0 {
@@ -171,7 +218,7 @@ func TestModuloSqrt(t *testing.T) {
 
 	ZERO := big.NewInt(0)
 	ONE := big.NewInt(1)
-	
+
 	c := new(Curve)
 
 	Convey(`Check sqrt mod 2 cases`, t, func() {
@@ -182,7 +229,7 @@ func TestModuloSqrt(t *testing.T) {
 	})
 
 	Convey(`Verify that sqrt mod 17 results are correct.`, t, func() {
-		c.P = big.NewInt(17)	
+		c.P = big.NewInt(17)
 		for i := int64(0); i < 17; i++ {
 
 			rt := c.Sqrt(big.NewInt(i))
@@ -197,8 +244,8 @@ func TestModuloSqrt(t *testing.T) {
 		}
 	})
 
-	// Mod 2 and 17 cover all code for Sqrt. 
-	// These tests further test the dragon code. 
+	// Mod 2 and 17 cover all code for Sqrt.
+	// These tests further test the dragon code.
 
 	SkipConvey(`Verify that sqrt mod 73 results are correct.`, t, func() {
 		c.P = big.NewInt(73)
