@@ -3,3 +3,5 @@ go:
 - 1.2
 install:
 - go get -d github.com/smartystreets/goconvey
+- go get github.com/jacobsa/ogletest
+- go get github.com/jacobsa/oglematchers
